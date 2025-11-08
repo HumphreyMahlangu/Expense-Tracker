@@ -1,15 +1,26 @@
 package za.ac.mycput;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import  java.util.Date;
 import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.List;
 import java.util.InputMismatchException;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 
 public class ExpenseTracker {
     private static List<Expense> expense = new ArrayList<>();
     private static Scanner scanner = new Scanner(System.in);
+    private static final String FILE_NAME = "expenses.csv";
     public static void main(String[] args) {
+        System.out.println("DEBUG: Saving file in this folder: " + new java.io.File(".").getAbsolutePath());
+
+        loadExpensesFromFile();
 
         while (true) {
             printMenu();
@@ -63,6 +74,8 @@ public class ExpenseTracker {
         Expense newExpense = new Expense(amount, description);
         expense.add(newExpense);
 
+        saveExpensesToFile();
+
         System.out.println("Expense added successfully(ID: " + newExpense.getId() + ")");
     }
 
@@ -108,6 +121,7 @@ public class ExpenseTracker {
             System.out.println("Expense not found!");
         }else {
             expense.remove(expenseToDelete);
+            saveExpensesToFile();
             System.out.println("Expense deleted successfully");
         }
     }
@@ -169,12 +183,69 @@ public class ExpenseTracker {
         return null;
     }
 
+    private static void saveExpensesToFile() {
+        System.out.println("DEBUG: Attempting to save to file: " + FILE_NAME);
+        try (FileWriter fw = new FileWriter(FILE_NAME);
+             PrintWriter pw = new PrintWriter(fw)) {
+
+
+            for (Expense exp : expense) {
+                pw.println(exp.toCsvString());
+            }
+            System.out.println("DEBUG: Successfully saved expenses.");
+
+        } catch (IOException e) {
+            System.out.println("Error: Could not save expenses to file: " + e.getMessage());
+        }
+    }
+
+
+    private static void loadExpensesFromFile() {
+        File file = new File(FILE_NAME);
+
+        if (!file.exists()) {
+            return;
+        }
+
+        int maxId = 0;
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] values = line.split(",");
+                if (values.length == 4) {
+                    try {
+                        int id = Integer.parseInt(values[0]);
+                        LocalDate date = LocalDate.parse(values[1]);
+                        String description = values[2];
+                        double amount = Double.parseDouble(values[3]);
+
+                        Expense loadedExpense = new Expense(id, date, description, amount);
+                        expense.add(loadedExpense);
+
+                        if (id > maxId) {
+                            maxId = id;
+                        }
+
+                    } catch (NumberFormatException | DateTimeParseException e) {
+                        e.printStackTrace();
+
+                    }
+                } else {
+                    System.out.println("DEkipping.");
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        Expense.setNextId(maxId + 1);
+    }
+
 
     private static double getDoubleInput() {
         while (true) {
             try {
                 double amount = scanner.nextDouble();
-                scanner.nextLine(); // This "consumes" the leftover newline character
+                scanner.nextLine();
                 if (amount < 0) {
                     System.out.println("Amount cannot be negative. Please re-enter:");
                 } else {

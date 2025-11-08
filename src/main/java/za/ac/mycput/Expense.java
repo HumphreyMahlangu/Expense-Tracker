@@ -1,5 +1,6 @@
 package za.ac.mycput;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 
 
 public class Expense {
@@ -14,6 +15,21 @@ public class Expense {
         this.description = description;
         this.date = LocalDate.now();
         this.id = nextID++;
+    }
+
+    public Expense(int id, LocalDate date, String description, double amount) {
+        this.id = id;
+        this.date = date;
+        this.description = description;
+        this.amount = amount;
+    }
+
+    public static void setNextId(int id) {
+        nextID = id;
+    }
+
+    public String toCsvString() {
+        return id + "," + date + "," + description + "," + amount;
     }
 
     public double getAmount() {
